@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-// --- Types (These remain the same) ---
+// Types and data fetching logic remain the same
 interface Model {
   id: number;
   name: string;
@@ -13,13 +13,7 @@ interface Model {
 interface Database {
   [companyName: string]: Model[];
 }
-type ModelPageProps = {
-  params: {
-    modelId: string;
-  };
-};
 
-// --- Data Fetching Logic (Remains the same) ---
 async function getModelById(id: number): Promise<Model | null> {
     const dbPath = path.join(process.cwd(), 'database.json');
     try {
@@ -33,17 +27,14 @@ async function getModelById(id: number): Promise<Model | null> {
         }
         return null;
     } catch (error) {
-        console.error("Failed to read database:", error);
         return null;
     }
 }
 
-// --- NEW: Asynchronous Component for Content ---
-// This component does the actual work: fetching data and rendering the result.
+// Asynchronous component for rendering content
 async function ModelContent({ modelId }: { modelId: number }) {
   const model = await getModelById(modelId);
 
-  // If the model is not found after awaiting, trigger a 404.
   if (!model) {
     notFound();
   }
@@ -67,32 +58,27 @@ async function ModelContent({ modelId }: { modelId: number }) {
   );
 }
 
+// A simple loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <p className="text-xl text-cyan-400">Loading Model...</p>
+    </div>
+  );
+}
 
-// --- MODIFIED: The Main Page Export ---
-// This is now a regular, SYNCHRONOUS component.
-// Its only job is to parse params and set up the Suspense boundary.
-export default function ModelPage({ params }: ModelPageProps) {
+// THE MAIN FIX IS HERE: The Page Export with a simple, inline type
+// We are explicitly NOT using a separate type alias.
+export default function ModelPage({ params }: { params: { modelId: string } }) {
   const modelId = parseInt(params.modelId, 10);
 
-  // Basic validation before rendering
   if (isNaN(modelId)) {
     notFound();
   }
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingFallback />}>
       <ModelContent modelId={modelId} />
     </Suspense>
-  );
-}
-
-// --- NEW: A Simple Loading Fallback Component ---
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="text-center">
-        <p className="text-xl text-cyan-400">Loading Model...</p>
-      </div>
-    </div>
   );
 }
