@@ -2,8 +2,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
-// --- Types (can be shared in a separate file) ---
+// --- Types (These remain the same) ---
 interface Model {
   id: number;
   name: string;
@@ -12,24 +13,18 @@ interface Model {
 interface Database {
   [companyName: string]: Model[];
 }
-
-// --- CHANGE #1: Define an explicit type for the page's props ---
-// This is the main fix for the build error.
 type ModelPageProps = {
   params: {
     modelId: string;
   };
-  searchParams?: { [key: string]: string | string[] | undefined };
 };
 
-
-// --- Data Fetching (Server-side) ---
+// --- Data Fetching Logic (Remains the same) ---
 async function getModelById(id: number): Promise<Model | null> {
     const dbPath = path.join(process.cwd(), 'database.json');
     try {
         const data = await fs.readFile(dbPath, 'utf-8');
         const db: Database = JSON.parse(data);
-        
         for (const companyName in db) {
             const model = db[companyName].find(m => m.id === id);
             if (model) {
@@ -43,16 +38,12 @@ async function getModelById(id: number): Promise<Model | null> {
     }
 }
 
-// --- The Page Component ---
-// --- CHANGE #2: Apply the new type to the component's props ---
-export default async function ModelPage({ params }: ModelPageProps) {
-  const modelId = parseInt(params.modelId, 10);
-  if (isNaN(modelId)) {
-    notFound();
-  }
-
+// --- NEW: Asynchronous Component for Content ---
+// This component does the actual work: fetching data and rendering the result.
+async function ModelContent({ modelId }: { modelId: number }) {
   const model = await getModelById(modelId);
 
+  // If the model is not found after awaiting, trigger a 404.
   if (!model) {
     notFound();
   }
@@ -72,6 +63,36 @@ export default async function ModelPage({ params }: ModelPageProps) {
         sandbox="allow-scripts allow-same-origin"
         className="w-full h-full border-0"
       />
+    </div>
+  );
+}
+
+
+// --- MODIFIED: The Main Page Export ---
+// This is now a regular, SYNCHRONOUS component.
+// Its only job is to parse params and set up the Suspense boundary.
+export default function ModelPage({ params }: ModelPageProps) {
+  const modelId = parseInt(params.modelId, 10);
+
+  // Basic validation before rendering
+  if (isNaN(modelId)) {
+    notFound();
+  }
+
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ModelContent modelId={modelId} />
+    </Suspense>
+  );
+}
+
+// --- NEW: A Simple Loading Fallback Component ---
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="text-center">
+        <p className="text-xl text-cyan-400">Loading Model...</p>
+      </div>
     </div>
   );
 }
