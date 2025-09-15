@@ -67,9 +67,11 @@ function LoadingFallback() {
   );
 }
 
-// THE MAIN FIX IS HERE: The Page Export with a simple, inline type
-// We are explicitly NOT using a separate type alias.
-export default function ModelPage({ params }: { params: { modelId: string } }) {
+type PageProps = {
+  params: { modelId: string };
+};
+
+export default async function ModelPage({ params }: PageProps) {
   const modelId = parseInt(params.modelId, 10);
 
   if (isNaN(modelId)) {
@@ -77,8 +79,6 @@ export default function ModelPage({ params }: { params: { modelId: string } }) {
   }
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
       <ModelContent modelId={modelId} />
-    </Suspense>
   );
 }
