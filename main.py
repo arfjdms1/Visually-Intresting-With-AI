@@ -10,22 +10,19 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+# --- REMOVED: passlib is no longer used ---
 from pydantic import BaseModel
 
 # --- Security & Configuration ---
-# IMPORTANT: In a real application, load these from environment variables or a secrets file!
-SECRET_KEY = """1r4reuuz>M"A=Cu8oB*oWBDGs]$$98P8[I=]l<7v3Bo]UUc{'*0e"""  # CHANGE THIS!
+SECRET_KEY = """1rl;kuuz>M"A=Cu8oB*oWBDGs]$$98P8[I=]l<7v3Bo]UUc{'*0e"""
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-DB_PATH = Path("/tmp/database.json") # Correct path for serverless environments
+DB_PATH = Path("/tmp/database.json")
 
-# Password Hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# This is the hash for the password "admin". Generate your own for production.
-
+# --- MODIFICATION: Plain-text password is stored directly ---
+# !!! SECURITY WARNING: This is highly insecure. Do not use in production. !!!
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD_HASH = "$2b$12$EixZaYVK13n9lJmlGZ8dE.9q6s3JAb2y235DEpbpz52A28/1o/z8m"
+ADMIN_PASSWORD = "21@Pril2012" # Plain text password
 
 app = FastAPI(title="AI Model Showcase API")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -41,9 +38,10 @@ class ModelIn(BaseModel):
     name: str
     htmlContent: str
 
-# --- Security Utility Functions ---
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+# --- MODIFICATION: Security functions are simplified ---
+def verify_password(plain_password, stored_password):
+    # This is now a simple, insecure string comparison.
+    return plain_password == stored_password
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -91,10 +89,11 @@ async def find_model_by_id(model_id: int):
     return None
 
 
-# --- NEW: Authentication Endpoint ---
+# --- MODIFICATION: Authentication Endpoint now uses plain-text check ---
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    if not (form_data.username == ADMIN_USERNAME and verify_password(form_data.password, ADMIN_PASSWORD_HASH)):
+    # The check now compares the submitted password directly with the stored plain-text password.
+    if not (form_data.username == ADMIN_USERNAME and verify_password(form_data.password, ADMIN_PASSWORD)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -107,7 +106,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# --- Public API Routes (No Authentication) ---
+# --- Public API Routes (Unchanged) ---
 @app.get("/api/data", response_class=JSONResponse)
 async def get_all_data():
     return await read_data()
@@ -120,9 +119,10 @@ async def get_model_html(model_id: int):
     back_button_html = """<a href="/" style="position: fixed; top: 10px; left: 10px; padding: 10px 15px; background-color: #03DAC6; color: black; text-decoration: none; border-radius: 5px; font-family: sans-serif; z-index: 10000;">&larr; Back</a>"""
     return HTMLResponse(content=back_button_html + model["htmlContent"])
 
-# --- PROTECTED Admin API Routes ---
+# --- PROTECTED Admin API Routes (Unchanged) ---
 @app.post("/api/companies", status_code=201)
 async def create_company(request: Request, current_user: dict = Depends(get_current_user)):
+    # ... (rest of the admin routes are unchanged) ...
     body = await request.json()
     company_name = body.get("companyName")
     if not company_name:
@@ -156,11 +156,12 @@ async def delete_model(company_name: str, model_id: int, current_user: dict = De
     await write_data(data)
     return Response(status_code=204)
 
-# --- Serve The Front-End ---
+
+# --- Serve The Front-End (Unchanged) ---
 @app.get("/", response_class=FileResponse)
 async def serve_frontend():
     return FileResponse("static/index.html")
 
-# --- Run Command ---
+# --- Run Command (Unchanged) ---
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
