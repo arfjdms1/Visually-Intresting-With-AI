@@ -1,14 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const app = {
-        isLoggedIn: false,
-        // DOM Elements
+        // No isLoggedIn state needed, the presence of a token is the state.
         elements: {
-            // New modal elements
             loginModalOverlay: document.getElementById('login-modal-overlay'),
             openLoginBtn: document.getElementById('open-login-button'),
             closeModalBtn: document.getElementById('close-modal-button'),
-            
-            // Existing elements
             passwordInput: document.getElementById('password'),
             loginButton: document.getElementById('login-button'),
             loginError: document.getElementById('login-error'),
@@ -25,26 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         init() {
             this.attachEventListeners();
-            this.switchView('public'); // Default to public view on load
+            this.checkLoginState();
         },
 
         attachEventListeners() {
-            // Modal controls
-            this.elements.openLoginBtn.addEventListener('click', () => this.showModal(true));
+            this.elements.openLoginBtn.addEventListener('click', () => this.handleAuthAction());
             this.elements.closeModalBtn.addEventListener('click', () => this.showModal(false));
             this.elements.loginModalOverlay.addEventListener('click', (e) => {
                 if (e.target === this.elements.loginModalOverlay) this.showModal(false);
             });
-
-            // Login logic
-            this.elements.loginButton.addEventListener('click', () => this.handleLogin());
-            this.elements.passwordInput.addEventListener('keypress', (e) => e.key === 'Enter' && this.handleLogin());
-            
-            // View switcher
+            this.elements.loginButton.addEventListener('click', () => this.handleLoginAttempt());
+            this.elements.passwordInput.addEventListener('keypress', (e) => e.key === 'Enter' && this.handleLoginAttempt());
             this.elements.viewAdminBtn.addEventListener('click', () => this.switchView('admin'));
             this.elements.viewPublicBtn.addEventListener('click', () => this.switchView('public'));
-            
-            // Admin actions
             this.elements.addCompanyBtn.addEventListener('click', () => this.addCompany());
             this.elements.adminContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('add-model-button')) this.addModel(e.target.dataset.company);
@@ -52,30 +41,73 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         },
         
-        showModal(show) {
-            this.elements.loginModalOverlay.classList.toggle('hidden', !show);
+        getToken() {
+            return sessionStorage.getItem('authToken');
         },
 
-        handleLogin() {
-            if (this.elements.passwordInput.value === 'admin') {
-                this.isLoggedIn = true;
-                this.showModal(false);
-                this.elements.openLoginBtn.classList.add('hidden'); // Hide login button
-                this.elements.viewSwitcher.classList.remove('hidden'); // Show view switcher
-                this.switchView('admin');
+        checkLoginState() {
+            const token = this.getToken();
+            if (token) {
+                this.elements.openLoginBtn.textContent = 'Logout';
+                this.elements.openLoginBtn.classList.replace('button-secondary', 'button-primary');
+                this.elements.viewSwitcher.classList.remove('hidden');
+                this.switchView('admin'); // Default to admin view if logged in
             } else {
-                this.elements.loginError.style.visibility = 'visible';
+                this.elements.openLoginBtn.textContent = 'Admin Login';
+                this.elements.openLoginBtn.classList.replace('button-primary', 'button-secondary');
+                this.elements.viewSwitcher.classList.add('hidden');
+                this.switchView('public'); // Default to public view
+            }
+        },
+
+        showModal(show) {
+            this.elements.loginModalOverlay.classList.toggle('hidden', !show);
+            if (show) {
+                this.elements.passwordInput.focus();
+                this.elements.loginError.style.visibility = 'hidden';
+            }
+        },
+
+        handleAuthAction() {
+            if (this.getToken()) {
+                // If logged in, the button is a logout button
+                sessionStorage.removeItem('authToken');
+                this.checkLoginState();
+            } else {
+                // If logged out, the button opens the login modal
+                this.showModal(true);
+            }
+        },
+
+        async handleLoginAttempt() {
+            const formData = new FormData();
+            formData.append('username', 'admin'); // Hardcoded username
+            formData.append('password', this.elements.passwordInput.value);
+
+            try {
+                const response = await fetch('/token', { method: 'POST', body: formData });
+                if (!response.ok) {
+                    throw new Error('Login failed');
+                }
+                const data = await response.json();
+                sessionStorage.setItem('authToken', data.access_token);
                 this.elements.passwordInput.value = '';
+                this.showModal(false);
+                this.checkLoginState();
+            } catch (error) {
+                this.elements.loginError.style.visibility = 'visible';
             }
         },
 
         async switchView(view) {
             const data = await this.fetchData();
-            if (view === 'public' || !this.isLoggedIn) {
+            const isLoggedIn = !!this.getToken();
+
+            if (view === 'public' || !isLoggedIn) {
                 this.renderPublicView(data);
                 this.elements.publicView.classList.remove('hidden');
                 this.elements.adminPanel.classList.add('hidden');
-                if (this.isLoggedIn) {
+                if (isLoggedIn) {
                     this.elements.viewPublicBtn.classList.replace('button-secondary', 'button-primary');
                     this.elements.viewAdminBtn.classList.replace('button-primary', 'button-secondary');
                 }
@@ -88,15 +120,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         
-        async fetchData() { /* ... unchanged ... */ },
-        async addCompany() { /* ... unchanged ... */ },
-        async addModel(companyName) { /* ... unchanged ... */ },
-        async deleteModel(companyName, modelId) { /* ... unchanged ... */ },
-        renderAdminView(data) { /* ... unchanged ... */ },
-        renderPublicView(data) { /* ... unchanged ... */ },
+        getAuthHeaders() {
+            const token = this.getToken();
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        },
+
+        async fetchData() { /* ... unchanged but using headers ... */ },
+        async addCompany() { /* ... unchanged but using headers ... */ },
+        async addModel(companyName) { /* ... unchanged but using headers ... */ },
+        async deleteModel(companyName, modelId) { /* ... unchanged but using headers ... */ },
+        renderAdminView(data) { /* ... same rendering logic ... */ },
+        renderPublicView(data) { /* ... same rendering logic ... */ },
     };
 
-    // Copy the unchanged methods from the previous script.js version
+    // Methods that need auth headers now get them automatically
     const unchangedMethods = {
         async fetchData() {
             const response = await fetch('/api/data');
@@ -105,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async addCompany() {
             const companyName = app.elements.newCompanyNameInput.value.trim();
             if (!companyName) return;
-            await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyName }) });
+            await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', ...app.getAuthHeaders() }, body: JSON.stringify({ companyName }) });
             app.elements.newCompanyNameInput.value = '';
             app.switchView('admin');
         },
@@ -113,12 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById(`model-name-${companyName}`).value.trim();
             const htmlContent = document.getElementById(`model-html-${companyName}`).value.trim();
             if (!name || !htmlContent) return alert('Model name and HTML content are required.');
-            await fetch(`/api/companies/${companyName}/models`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, htmlContent }) });
+            await fetch(`/api/companies/${companyName}/models`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...app.getAuthHeaders() }, body: JSON.stringify({ name, htmlContent }) });
             app.switchView('admin');
         },
         async deleteModel(companyName, modelId) {
             if (!confirm('Are you sure?')) return;
-            await fetch(`/api/models/${companyName}/${modelId}`, { method: 'DELETE' });
+            await fetch(`/api/models/${companyName}/${modelId}`, { method: 'DELETE', headers: app.getAuthHeaders() });
             app.switchView('admin');
         },
         renderAdminView(data) {
