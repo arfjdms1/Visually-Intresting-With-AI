@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Showcase</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section will be handled by JavaScript -->
+        <section id="login-section">
+            <h1>Admin Panel Login</h1>
+            <div class="login-box">
+                <input type="password" id="password" placeholder="Password">
+                <button id="login-button" class="button-primary">Login</button>
+                <p id="login-error">Invalid password.</p>
+            </div>
+        </section>
+
+        <!-- Main Content (hidden by default) -->
+        <div id="main-content" class="hidden">
+            <div class="view-switcher">
+                <button id="view-admin-button" class="button-primary">Admin View</button>
+                <button id="view-public-button" class="button-secondary">View Public Page</button>
+            </div>
+
+            <!-- Admin Panel -->
+            <section id="admin-panel" class="hidden">
+                <h2 class="section-header">Admin Dashboard</h2>
+                <div id="create-company-form">
+                    <input type="text" id="new-company-name" placeholder="Enter new company name">
+                    <button id="add-company-button" class="button-primary">Create Company</button>
+                </div>
+                <div id="companies-container-admin"></div>
+            </section>
+
+            <!-- Public View -->
+            <section id="public-view">
+                <h2 class="section-header">AI Model Showcase</h2>
+                <div id="companies-container-public"></div>
+            </section>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
