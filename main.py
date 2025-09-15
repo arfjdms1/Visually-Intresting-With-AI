@@ -25,7 +25,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # This is the hash for the password "admin". Generate your own for production.
 
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD_HASH = "$2b$12$dZl.5z7.lV1s4/sQ1E6s7uP1I0y9J2T3G4f5H6j7K8L9m0N1o2P3"
+ADMIN_PASSWORD_HASH = "$2b$12$EixZaYVK13n9lJmlGZ8dE.9q6s3JAb2y235DEpbpz52A28/1o/z8m"
 
 app = FastAPI(title="AI Model Showcase API")
 app.mount("/static", StaticFiles(directory="static"), name="static")
