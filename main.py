@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 # --- Configuration ---
 app = FastAPI(title="AI Model Showcase API")
-DB_PATH = Path("database.json")
+DB_PATH = Path("/tmp/database.json")
 STATIC_DIR = Path("static")
 
 # Mount the 'static' directory to serve files like CSS and JS
