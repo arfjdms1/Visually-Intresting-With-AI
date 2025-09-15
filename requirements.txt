@@ -1,3 +1,5 @@
 fastapi
 uvicorn[standard]
 aiofiles
+python-jose[cryptography]
+passlib[bcrypt]
