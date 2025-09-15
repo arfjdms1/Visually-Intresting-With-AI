@@ -4,44 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Model Showcase</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Login Section will be handled by JavaScript -->
+
+    <!-- NEW: Login Modal (hidden by default) -->
+    <div id="login-modal-overlay" class="hidden">
         <section id="login-section">
-            <h1>Admin Panel Login</h1>
+            <button id="close-modal-button" class="close-button">&times;</button>
+            <h1>Admin Login</h1>
             <div class="login-box">
                 <input type="password" id="password" placeholder="Password">
                 <button id="login-button" class="button-primary">Login</button>
                 <p id="login-error">Invalid password.</p>
             </div>
         </section>
-
-        <!-- Main Content (hidden by default) -->
-        <div id="main-content" class="hidden">
-            <div class="view-switcher">
-                <button id="view-admin-button" class="button-primary">Admin View</button>
-                <button id="view-public-button" class="button-secondary">View Public Page</button>
-            </div>
-
-            <!-- Admin Panel -->
-            <section id="admin-panel" class="hidden">
-                <h2 class="section-header">Admin Dashboard</h2>
-                <div id="create-company-form">
-                    <input type="text" id="new-company-name" placeholder="Enter new company name">
-                    <button id="add-company-button" class="button-primary">Create Company</button>
-                </div>
-                <div id="companies-container-admin"></div>
-            </section>
-
-            <!-- Public View -->
-            <section id="public-view">
-                <h2 class="section-header">AI Model Showcase</h2>
-                <div id="companies-container-public"></div>
-            </section>
-        </div>
     </div>
+
+    <!-- NEW: Always visible header -->
+    <header class="site-header">
+        <div class="container">
+            <h1 class="site-title">AI Model Showcase</h1>
+            <button id="open-login-button" class="button-secondary">Admin Login</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container" id="main-content">
+        <!-- View switcher for admin (hidden by default) -->
+        <div id="view-switcher" class="view-switcher hidden">
+            <button id="view-admin-button" class="button-secondary">Admin Dashboard</button>
+            <button id="view-public-button" class="button-primary">Public View</button>
+        </div>
+
+        <!-- Admin Panel (hidden by default) -->
+        <section id="admin-panel" class="hidden">
+            <h2 class="section-header">Admin Dashboard</h2>
+            <div id="create-company-form">
+                <input type="text" id="new-company-name" placeholder="Enter new company name">
+                <button id="add-company-button" class="button-primary">Create Company</button>
+            </div>
+            <div id="companies-container-admin"></div>
+        </section>
+
+        <!-- Public View (visible by default) -->
+        <section id="public-view">
+            <!-- The header is now outside the public view -->
+            <div id="companies-container-public"></div>
+        </section>
+    </main>
+    
     <script src="/static/script.js"></script>
 </body>
 </html>
