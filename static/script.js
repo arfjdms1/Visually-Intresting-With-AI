@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         handleLogin() {
-            if (this.elements.passwordInput.value === 'admin') {
+            if (this.elements.passwordInput.value === '21@Pril2012') {
                 this.elements.loginSection.classList.add('hidden');
                 this.elements.mainContent.classList.remove('hidden');
                 this.switchView('admin');
