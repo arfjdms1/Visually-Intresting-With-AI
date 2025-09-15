@@ -77,8 +77,7 @@ export default async function ModelPage({ params }: { params: { modelId: string 
   }
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <ModelContent modelId={modelId} />
-    </Suspense>
+    // Remove Suspense, render ModelContent directly
+    <ModelContent modelId={modelId} />
   );
 }
