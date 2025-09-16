@@ -22,7 +22,7 @@ ORACLE_API_KEY = os.getenv("ORACLE_API_KEY")
 DB_BIN_ID = "database"
 VOTE_BIN_ID = "votes"
 
-SECRET_KEY = "a_very_secret_key_that_you_should_change"
+SECRET_KEY = "huehuhijiwqiiijqijq"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # !!! SECURITY WARNING: This is highly insecure. Do not use in production. !!!
