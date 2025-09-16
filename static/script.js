@@ -4,10 +4,7 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let particlesArray;
-    function setupCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
+    function setupCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     class Particle {
         constructor() {
             this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height;
@@ -19,10 +16,7 @@
             if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY;
             this.x += this.speedX; this.y += this.speedY;
         }
-        draw() {
-            ctx.fillStyle = this.color; ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-        }
+        draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
     }
     function init() {
         setupCanvas(); particlesArray = [];
@@ -64,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addCompanyBtn: document.getElementById('add-company-button'), newCompanyNameInput: document.getElementById('new-company-name'),
             adminContainer: document.getElementById('companies-container-admin'), publicContainer: document.getElementById('companies-container-public'),
             searchInput: document.getElementById('search-input'), leaderboardList: document.getElementById('leaderboard-list'),
+            loadingIndicator: document.getElementById('loading-indicator'),
         },
         init() { this.attachEventListeners(); this.checkLoginState(); },
         attachEventListeners() {
@@ -85,55 +80,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 const voteBtn = e.target.closest('.vote-button'); if (voteBtn) this.handleVote(voteBtn.dataset.modelId, voteBtn);
             });
         },
-        handleHeaderScroll() {
-            if (window.scrollY > 10) this.elements.siteHeader.classList.add('scrolled');
-            else this.elements.siteHeader.classList.remove('scrolled');
+        setLoading(isLoading) { this.elements.loadingIndicator.classList.toggle('hidden', !isLoading); this.elements.publicView.classList.toggle('hidden', isLoading); this.elements.adminPanel.classList.toggle('hidden', isLoading); },
+        async fetchData() { const response = await fetch('/api/data', { cache: 'no-store' }); if (!response.ok) throw new Error("Failed to fetch data"); return response.json(); },
+        async switchView(view) {
+            this.setLoading(true); const isLoggedIn = !!this.getToken();
+            try {
+                if (view === 'public' || !isLoggedIn) {
+                    await this.renderLeaderboard(); const data = await this.fetchData(); this.renderPublicView(data);
+                    this.elements.publicView.classList.remove('hidden'); this.elements.adminPanel.classList.add('hidden');
+                } else {
+                    const data = await this.fetchData(); this.renderAdminView(data);
+                    this.elements.adminPanel.classList.remove('hidden'); this.elements.publicView.classList.add('hidden');
+                }
+            } catch (error) { console.error("Error switching view:", error); } finally { this.setLoading(false); }
         },
+        async addCompany() { const companyName = this.elements.newCompanyNameInput.value.trim(); if (!companyName) return; await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ companyName }) }); this.elements.newCompanyNameInput.value = ''; await this.switchView('admin'); },
+        async addModel(companyName) {
+            const encodedCompanyName = encodeURIComponent(companyName); const name = document.getElementById(`model-name-${companyName}`).value.trim();
+            const description = document.getElementById(`model-desc-${companyName}`).value.trim(); const htmlContent = document.getElementById(`model-html-${companyName}`).value.trim();
+            if (!name || !htmlContent) return alert('Model name and HTML content are required.');
+            await fetch(`/api/companies/${encodedCompanyName}/models`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ name, description, htmlContent }) });
+            await this.switchView('admin');
+        },
+        async deleteModel(companyName, modelId) { if (!confirm('Are you sure?')) return; const encodedCompanyName = encodeURIComponent(companyName); await fetch(`/api/models/${encodedCompanyName}/${modelId}`, { method: 'DELETE', headers: this.getAuthHeaders() }); await this.switchView('admin'); },
+        async renderLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard', { cache: 'no-store' }); const data = await response.json();
+                this.elements.leaderboardList.innerHTML = data.map((model, index) => `<li><span class="leaderboard-rank">${index + 1}</span><div class="leaderboard-info"><div class="leaderboard-name">${model.name}</div><div class="leaderboard-company">${model.company}</div></div><span class="leaderboard-votes">${model.votes}</span></li>`).join('');
+            } catch (error) { this.elements.leaderboardList.innerHTML = '<li>Could not load leaderboard.</li>'; }
+        },
+        handleHeaderScroll() { if (window.scrollY > 10) this.elements.siteHeader.classList.add('scrolled'); else this.elements.siteHeader.classList.remove('scrolled'); },
         applyFadeInAnimation(container) { container.childNodes.forEach((child, index) => { if (child.nodeType === 1) { child.style.animationDelay = `${index * 100}ms`; child.classList.add('fade-in'); } }); },
         getToken() { return sessionStorage.getItem('authToken'); },
         checkLoginState() {
             const token = this.getToken();
-            if (token) {
-                this.elements.openLoginBtn.textContent = 'Logout'; this.elements.openLoginBtn.classList.remove('btn-secondary');
-                this.elements.openLoginBtn.classList.add('btn-gradient'); this.elements.viewSwitcher.classList.remove('hidden');
-                this.switchView('admin');
-            } else {
-                this.elements.openLoginBtn.textContent = 'Admin Login'; this.elements.openLoginBtn.classList.add('btn-secondary');
-                this.elements.openLoginBtn.classList.remove('btn-gradient'); this.elements.viewSwitcher.classList.add('hidden');
-                this.switchView('public');
-            }
+            if (token) { this.elements.openLoginBtn.textContent = 'Logout'; this.elements.openLoginBtn.classList.remove('btn-secondary'); this.elements.openLoginBtn.classList.add('btn-gradient'); this.elements.viewSwitcher.classList.remove('hidden'); this.switchView('admin'); }
+            else { this.elements.openLoginBtn.textContent = 'Admin Login'; this.elements.openLoginBtn.classList.add('btn-secondary'); this.elements.openLoginBtn.classList.remove('btn-gradient'); this.elements.viewSwitcher.classList.add('hidden'); this.switchView('public'); }
         },
         showModal(show) { this.elements.loginModalOverlay.classList.toggle('hidden', !show); if (show) { this.elements.passwordInput.focus(); this.elements.loginError.style.visibility = 'hidden'; } },
         handleAuthAction() { if (this.getToken()) { sessionStorage.removeItem('authToken'); this.checkLoginState(); } else { this.showModal(true); } },
         async handleLoginAttempt() {
             const formData = new FormData(); formData.append('username', 'admin'); formData.append('password', this.elements.passwordInput.value);
             try {
-                const response = await fetch('/token', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error('Login failed');
+                const response = await fetch('/token', { method: 'POST', body: formData }); if (!response.ok) throw new Error('Login failed');
                 const data = await response.json(); sessionStorage.setItem('authToken', data.access_token);
                 this.elements.passwordInput.value = ''; this.showModal(false); this.checkLoginState();
             } catch (error) { this.elements.loginError.style.visibility = 'visible'; }
         },
-        async switchView(view) {
-            const isLoggedIn = !!this.getToken();
-            if (view === 'public' || !isLoggedIn) {
-                this.renderLeaderboard(); const data = await this.fetchData(); this.renderPublicView(data);
-                this.elements.publicView.classList.remove('hidden'); this.elements.adminPanel.classList.add('hidden');
-            } else {
-                const data = await this.fetchData(); this.renderAdminView(data);
-                this.elements.adminPanel.classList.remove('hidden'); this.elements.publicView.classList.add('hidden');
-            }
-        },
         getAuthHeaders() { const token = this.getToken(); return token ? { 'Authorization': `Bearer ${token}` } : {}; },
-        async fetchData() { const response = await fetch('/api/data'); return response.json(); },
-        async addCompany() { const companyName = this.elements.newCompanyNameInput.value.trim(); if (!companyName) return; await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ companyName }) }); this.elements.newCompanyNameInput.value = ''; this.switchView('admin'); },
-        async addModel(companyName) {
-            const name = document.getElementById(`model-name-${companyName}`).value.trim(); const description = document.getElementById(`model-desc-${companyName}`).value.trim(); const htmlContent = document.getElementById(`model-html-${companyName}`).value.trim();
-            if (!name || !htmlContent) return alert('Model name and HTML content are required.');
-            await fetch(`/api/companies/${companyName}/models`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ name, description, htmlContent }) });
-            this.switchView('admin');
-        },
-        async deleteModel(companyName, modelId) { if (!confirm('Are you sure?')) return; await fetch(`/api/models/${companyName}/${modelId}`, { method: 'DELETE', headers: this.getAuthHeaders() }); this.switchView('admin'); },
         handleSearch(query) {
             const lowerCaseQuery = query.toLowerCase();
             this.elements.publicContainer.querySelectorAll('.company-card').forEach(card => {
@@ -147,22 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch(`/api/models/${modelId}/vote`, { method: 'POST' });
                 const result = await response.json(); if (!response.ok) throw new Error(result.detail || "Failed to vote");
                 buttonElement.previousElementSibling.textContent = result.new_votes; buttonElement.classList.add('voted');
-                this.renderLeaderboard();
+                await this.renderLeaderboard();
             } catch (error) { alert(error.message); buttonElement.classList.add('voted'); }
-        },
-        async renderLeaderboard() {
-            try {
-                const response = await fetch('/api/leaderboard'); const data = await response.json();
-                this.elements.leaderboardList.innerHTML = data.map((model, index) => `
-                    <li><span class="leaderboard-rank">${index + 1}</span><div class="leaderboard-info"><div class="leaderboard-name">${model.name}</div><div class="leaderboard-company">${model.company}</div></div><span class="leaderboard-votes">${model.votes}</span></li>
-                `).join('');
-            } catch (error) { this.elements.leaderboardList.innerHTML = '<li>Could not load leaderboard.</li>'; }
         },
         renderAdminView(data) {
             this.elements.adminContainer.innerHTML = '';
             for (const [companyName, models] of Object.entries(data)) {
-                const modelListHTML = models.map(model => `<li><span class="model-name">${model.name}</span><button class="delete-model" data-company="${companyName}" data-model-id="${model.id}">&times;</button></li>`).join('');
-                this.elements.adminContainer.innerHTML += `<div class="company-card"><h3>${companyName}</h3><div class="add-model-form"><input type="text" id="model-name-${companyName}" placeholder="New Model Name" class="ui-input"><textarea id="model-desc-${companyName}" placeholder="Brief model description..."></textarea><textarea id="model-html-${companyName}" placeholder="Paste model HTML payload..."></textarea><button class="ui-button btn-gradient add-model-button" data-company="${companyName}"><span>Add Model</span></button></div><div class="model-list"><ul>${modelListHTML}</ul></div></div>`;
+                const modelListHTML = models.map(model => `<li><div class="model-info"><span class="model-name">${model.name}</span><p class="model-description">${model.description || ''}</p></div><button class="delete-model" data-company="${companyName}" data-model-id="${model.id}">&times;</button></li>`).join('');
+                this.elements.adminContainer.innerHTML += `<div class="company-card"><h3>${companyName}</h3><div class="add-model-form"><input type="text" id="model-name-${companyName}" placeholder="New Model Name" class="ui-input"><textarea id="model-desc-${companyName}" placeholder="Brief model description..."></textarea><textarea id="model-html-${companyName}" placeholder="Paste model HTML payload..."></textarea><button class="ui-button btn-gradient add-model-button" data-company="${companyName}"><span>Add Model</span></button></div><div class="model-list"><h4>Registered Models</h4><ul>${modelListHTML}</ul></div></div>`;
             }
             this.applyFadeInAnimation(this.elements.adminContainer);
         },
@@ -170,18 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.elements.publicContainer.innerHTML = '';
             if (Object.keys(data).length === 0) { this.elements.publicContainer.innerHTML = '<div class="ui-panel" style="text-align: center; color: var(--text-secondary);">No models registered yet.</div>'; return; }
             for (const [companyName, models] of Object.entries(data)) {
-                const modelListHTML = models.map(model => `
-                    <li>
-                        <div class="model-info">
-                            <span class="model-name">${model.name}</span>
-                            <p class="model-description">${model.description || ''}</p>
-                        </div>
-                        <div class="vote-controls">
-                            <span class="vote-count">${model.votes || 0}</span>
-                            <button class="vote-button" data-model-id="${model.id}" title="Upvote this model">&#9650;</button>
-                        </div>
-                        <a href="/models/${model.id}" target="_blank" class="ui-button btn-secondary">View Payload</a>
-                    </li>`).join('');
+                const modelListHTML = models.map(model => `<li><div class="model-info"><span class="model-name">${model.name}</span><p class="model-description">${model.description || ''}</p></div><div class="vote-controls"><span class="vote-count">${model.votes || 0}</span><button class="vote-button" data-model-id="${model.id}" title="Upvote this model">&#9650;</button></div><a href="/models/${model.id}" target="_blank" class="ui-button btn-secondary">View Payload</a></li>`).join('');
                 this.elements.publicContainer.innerHTML += `<div class="company-card" data-company-name="${companyName}"><h3>${companyName}</h3><div class="model-list"><ul>${modelListHTML}</ul></div></div>`;
             }
             this.applyFadeInAnimation(this.elements.publicContainer);

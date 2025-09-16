@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Model Registry</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
@@ -38,8 +39,9 @@
                     <p class="hero-subtitle">Built for the makers of the 4934.tech community. Share, discover, and collaborate on the future of AI.</p>
                 </div>
             </section>
-
+            
             <div class="container" id="content-container">
+                <div id="loading-indicator" class="hidden">Loading...</div>
                 <div id="view-switcher" class="view-switcher hidden">
                     <button id="view-admin-button" class="ui-button btn-secondary">Dashboard</button>
                     <button id="view-public-button" class="ui-button btn-gradient"><span>Public View</span></button>
@@ -75,7 +77,6 @@
             </div>
         </footer>
     </div>
-
     <script src="/static/script.js"></script>
 </body>
 </html>
