@@ -10,12 +10,8 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Canvas for the animated background -->
     <canvas id="particle-canvas"></canvas>
-
-    <!-- Site Wrapper for full-screen layout -->
     <div class="site-wrapper">
-        <!-- Login Modal (structure unchanged) -->
         <div id="login-modal-overlay" class="hidden">
             <section id="login-section" class="ui-panel">
                 <button id="close-modal-button" class="close-button">&times;</button>
@@ -28,7 +24,6 @@
             </section>
         </div>
 
-        <!-- Site Header -->
         <header id="site-header" class="site-header">
             <nav class="container">
                 <a href="/" class="site-title">AI Model Registry</a>
@@ -36,28 +31,20 @@
             </nav>
         </header>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- NEW: Hero Section -->
             <section class="hero-section">
                 <div class="container">
-                    <h1 class="hero-title">
-                        A Community-Driven <span class="text-gradient">AI Model</span> Registry
-                    </h1>
-                    <p class="hero-subtitle">
-                        Built by the 4934.tech community. Share, discover, and collaborate on the future of AI.
-                    </p>
+                    <h1 class="hero-title">A Community-Driven <span class="text-gradient">AI Model</span> Registry</h1>
+                    <p class="hero-subtitle">Built for the makers of the 4934.tech community. Share, discover, and collaborate on the future of AI.</p>
                 </div>
             </section>
 
             <div class="container" id="content-container">
-                <!-- View switcher for admin -->
                 <div id="view-switcher" class="view-switcher hidden">
                     <button id="view-admin-button" class="ui-button btn-secondary">Dashboard</button>
                     <button id="view-public-button" class="ui-button btn-gradient"><span>Public View</span></button>
                 </div>
 
-                <!-- Admin Panel -->
                 <section id="admin-panel" class="hidden">
                     <div class="ui-panel" id="create-company-panel">
                         <h2 class="panel-title">Initiate New Entity</h2>
@@ -69,8 +56,14 @@
                     <div id="companies-container-admin"></div>
                 </section>
 
-                <!-- Public View -->
                 <section id="public-view">
+                    <div class="search-container">
+                        <input type="search" id="search-input" class="ui-input" placeholder="Search for a company...">
+                    </div>
+                    <section id="leaderboard-section" class="ui-panel">
+                        <h2 class="panel-title">Top 5 Models</h2>
+                        <ol id="leaderboard-list"></ol>
+                    </section>
                     <div id="companies-container-public"></div>
                 </section>
             </div>
@@ -78,7 +71,7 @@
 
         <footer class="site-footer">
             <div class="container">
-                <p>© 2025 4934.tech. All rights reserved.</p>
+                <p>© 2025 4934. All rights reserved.</p>
             </div>
         </footer>
     </div>
