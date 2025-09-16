@@ -138,6 +138,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
+# Vercel may route POST requests to /api/token; provide an alias that delegates to the same logic.
+@app.post("/api/token", response_model=Token)
+async def login_for_access_token_alias(form_data: OAuth2PasswordRequestForm = Depends()):
+    return await login_for_access_token(form_data)
+
 # --- Public API Routes ---
 @app.get("/api/data", response_class=JSONResponse)
 async def get_all_data(): return await read_data(DB_BIN_ID)
