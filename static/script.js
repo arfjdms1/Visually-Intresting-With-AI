@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // All application logic is now cleanly contained within this single object.
     const app = {
         elements: {
-            // New header element for scroll effect
             siteHeader: document.getElementById('site-header'),
-            
-            // Existing elements
             loginModalOverlay: document.getElementById('login-modal-overlay'),
             openLoginBtn: document.getElementById('open-login-button'),
             closeModalBtn: document.getElementById('close-modal-button'),
@@ -28,10 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         attachEventListeners() {
-            // New: Header scroll effect
             window.addEventListener('scroll', () => this.handleHeaderScroll());
-
-            // Modal and Auth
             this.elements.openLoginBtn.addEventListener('click', () => this.handleAuthAction());
             this.elements.closeModalBtn.addEventListener('click', () => this.showModal(false));
             this.elements.loginModalOverlay.addEventListener('click', (e) => {
@@ -39,20 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             this.elements.loginButton.addEventListener('click', () => this.handleLoginAttempt());
             this.elements.passwordInput.addEventListener('keypress', (e) => e.key === 'Enter' && this.handleLoginAttempt());
-            
-            // View switcher
             this.elements.viewAdminBtn.addEventListener('click', () => this.switchView('admin'));
             this.elements.viewPublicBtn.addEventListener('click', () => this.switchView('public'));
-            
-            // Admin actions
             this.elements.addCompanyBtn.addEventListener('click', () => this.addCompany());
             this.elements.adminContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('add-model-button')) this.addModel(e.target.dataset.company);
+                if (e.target.closest('.add-model-button')) this.addModel(e.target.closest('.add-model-button').dataset.company);
                 if (e.target.classList.contains('delete-model')) this.deleteModel(e.target.dataset.company, e.target.dataset.modelId);
             });
         },
         
-        // --- UI Enhancements ---
         handleHeaderScroll() {
             if (window.scrollY > 10) {
                 this.elements.siteHeader.classList.add('scrolled');
@@ -63,14 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         applyFadeInAnimation(container) {
             container.childNodes.forEach((child, index) => {
-                if (child.nodeType === 1) { // Ensure it's an element
+                if (child.nodeType === 1) {
                     child.style.animationDelay = `${index * 100}ms`;
                     child.classList.add('fade-in');
                 }
             });
         },
 
-        // --- Authentication & State Management ---
         getToken() { return sessionStorage.getItem('authToken'); },
 
         checkLoginState() {
@@ -78,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (token) {
                 this.elements.openLoginBtn.textContent = 'Logout';
                 this.elements.openLoginBtn.classList.remove('btn-secondary');
-                this.elements.openLoginBtn.classList.add('btn-gradient'); // Make logout button prominent
+                this.elements.openLoginBtn.classList.add('btn-gradient');
                 this.elements.viewSwitcher.classList.remove('hidden');
                 this.switchView('admin');
             } else {
@@ -90,55 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        showModal(show) { /* (No changes from previous version) */ },
-        handleAuthAction() { /* (No changes from previous version) */ },
-        async handleLoginAttempt() { /* (No changes from previous version) */ },
-
-        // --- View & Data Logic ---
-        async switchView(view) {
-            const data = await this.fetchData();
-            const isLoggedIn = !!this.getToken();
-
-            if (view === 'public' || !isLoggedIn) {
-                this.renderPublicView(data);
-                this.elements.publicView.classList.remove('hidden');
-                this.elements.adminPanel.classList.add('hidden');
-            } else { // Admin view
-                this.renderAdminView(data);
-                this.elements.adminPanel.classList.remove('hidden');
-                this.elements.publicView.classList.add('hidden');
-            }
-        },
-
-        getAuthHeaders() { /* (No changes from previous version) */ },
-        async fetchData() { /* (No changes from previous version) */ },
-        async addCompany() { /* (No changes from previous version) */ },
-        async addModel(companyName) { /* (No changes from previous version) */ },
-        async deleteModel(companyName, modelId) { /* (No changes from previous version) */ },
-
-        // --- Rendering Logic (with animation call) ---
-        renderAdminView(data) {
-            this.elements.adminContainer.innerHTML = '';
-            for (const [companyName, models] of Object.entries(data)) {
-                // ... rendering logic from previous JS version
-            }
-            this.applyFadeInAnimation(this.elements.adminContainer); // Add animation
-        },
-        renderPublicView(data) {
-            this.elements.publicContainer.innerHTML = '';
-            if (Object.keys(data).length === 0) {
-                // ... rendering logic from previous JS version
-                return;
-            }
-            for (const [companyName, models] of Object.entries(data)) {
-                // ... rendering logic from previous JS version
-            }
-            this.applyFadeInAnimation(this.elements.publicContainer); // Add animation
-        },
-    };
-
-    // Copy unchanged methods to keep code clean
-    const unchangedMethods = {
         showModal(show) {
             this.elements.loginModalOverlay.classList.toggle('hidden', !show);
             if (show) {
@@ -146,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.elements.loginError.style.visibility = 'hidden';
             }
         },
+
         handleAuthAction() {
             if (this.getToken()) {
                 sessionStorage.removeItem('authToken');
@@ -154,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.showModal(true);
             }
         },
+
         async handleLoginAttempt() {
             const formData = new FormData();
             formData.append('username', 'admin');
@@ -170,34 +112,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.elements.loginError.style.visibility = 'visible';
             }
         },
+
+        async switchView(view) {
+            const data = await this.fetchData();
+            const isLoggedIn = !!this.getToken();
+            if (view === 'public' || !isLoggedIn) {
+                this.renderPublicView(data);
+                this.elements.publicView.classList.remove('hidden');
+                this.elements.adminPanel.classList.add('hidden');
+            } else {
+                this.renderAdminView(data);
+                this.elements.adminPanel.classList.remove('hidden');
+                this.elements.publicView.classList.add('hidden');
+            }
+        },
+
         getAuthHeaders() {
             const token = this.getToken();
             return token ? { 'Authorization': `Bearer ${token}` } : {};
         },
+
         async fetchData() {
             const response = await fetch('/api/data');
             return response.json();
         },
+
         async addCompany() {
-            const companyName = app.elements.newCompanyNameInput.value.trim();
+            const companyName = this.elements.newCompanyNameInput.value.trim();
             if (!companyName) return;
-            await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', ...app.getAuthHeaders() }, body: JSON.stringify({ companyName }) });
-            app.elements.newCompanyNameInput.value = '';
-            app.switchView('admin');
+            await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ companyName }) });
+            this.elements.newCompanyNameInput.value = '';
+            this.switchView('admin');
         },
+
         async addModel(companyName) {
             const name = document.getElementById(`model-name-${companyName}`).value.trim();
             const htmlContent = document.getElementById(`model-html-${companyName}`).value.trim();
-// I am replicating the functionality of my inspiration, 4934.tech, a transparent, open source, friendly community organization for makers. 4934.tech is the inspiration for this UI. I am building a tool that is a part of this community. My tool is called AI Model Registry. It is a tool for makers to share their AI models with the community. It is a part of the 4934.tech community.
             if (!name || !htmlContent) return alert('Model name and HTML content are required.');
-            await fetch(`/api/companies/${companyName}/models`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...app.getAuthHeaders() }, body: JSON.stringify({ name, htmlContent }) });
-            app.switchView('admin');
+            await fetch(`/api/companies/${companyName}/models`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ name, htmlContent }) });
+            this.switchView('admin');
         },
+
         async deleteModel(companyName, modelId) {
             if (!confirm('Are you sure?')) return;
-            await fetch(`/api/models/${companyName}/${modelId}`, { method: 'DELETE', headers: app.getAuthHeaders() });
-            app.switchView('admin');
+            await fetch(`/api/models/${companyName}/${modelId}`, { method: 'DELETE', headers: this.getAuthHeaders() });
+            this.switchView('admin');
         },
+
         renderAdminView(data) {
             this.elements.adminContainer.innerHTML = '';
             for (const [companyName, models] of Object.entries(data)) {
@@ -206,9 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             this.applyFadeInAnimation(this.elements.adminContainer);
         },
+
         renderPublicView(data) {
             this.elements.publicContainer.innerHTML = '';
-            if (Object.keys(data).length === 0) { this.elements.publicContainer.innerHTML = '<div class="ui-panel" style="text-align: center; color: var(--text-secondary);">No models have been registered yet.</div>'; return; }
+            if (Object.keys(data).length === 0) {
+                this.elements.publicContainer.innerHTML = '<div class="ui-panel" style="text-align: center; color: var(--text-secondary);">No models have been registered yet.</div>';
+                return;
+            }
             for (const [companyName, models] of Object.entries(data)) {
                 const modelListHTML = models.map(model => `<li><span class="model-name">${model.name}</span><a href="/models/${model.id}" target="_blank" class="ui-button btn-secondary">View Payload</a></li>`).join('');
                 this.elements.publicContainer.innerHTML += `<div class="company-card"><h3>${companyName}</h3><div class="model-list"><ul>${modelListHTML}</ul></div></div>`;
@@ -216,8 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.applyFadeInAnimation(this.elements.publicContainer);
         },
     };
-    Object.assign(app, unchangedMethods);
 
     // Initialize the application
     app.init();
-});```
+});
