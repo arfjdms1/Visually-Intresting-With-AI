@@ -3,53 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Model Showcase</title>
+    <title>AI Model Registry</title>
+    <!-- Recommended Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-    <!-- NEW: Login Modal (hidden by default) -->
+    <!-- Login Modal -->
     <div id="login-modal-overlay" class="hidden">
-        <section id="login-section">
+        <section id="login-section" class="ui-box">
             <button id="close-modal-button" class="close-button">&times;</button>
-            <h1>Admin Login</h1>
+            <h1>[ ADMIN ACCESS ]</h1>
             <div class="login-box">
-                <input type="password" id="password" placeholder="Password">
-                <button id="login-button" class="button-primary">Login</button>
-                <p id="login-error">Invalid password.</p>
+                <input type="password" id="password" placeholder="PASSWORD" class="ui-input">
+                <button id="login-button" class="ui-button">[ AUTHENTICATE ]</button>
+                <p id="login-error">ACCESS DENIED.</p>
             </div>
         </section>
     </div>
 
-    <!-- NEW: Always visible header -->
+    <!-- Site Header -->
     <header class="site-header">
         <div class="container">
-            <h1 class="site-title">AI Model Showcase</h1>
-            <button id="open-login-button" class="button-secondary">Admin Login</button>
+            <h1 class="site-title" id="site-title">> AI_MODEL_REGISTRY<span class="blinking-cursor">_</span></h1>
+            <button id="open-login-button" class="ui-button">[ SECURE LOGIN ]</button>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="container" id="main-content">
-        <!-- View switcher for admin (hidden by default) -->
+        <!-- View switcher for admin -->
         <div id="view-switcher" class="view-switcher hidden">
-            <button id="view-admin-button" class="button-secondary">Admin Dashboard</button>
-            <button id="view-public-button" class="button-primary">Public View</button>
+            <button id="view-admin-button" class="ui-button inactive">[ ADMIN_DASHBOARD ]</button>
+            <button id="view-public-button" class="ui-button">[ PUBLIC_VIEW ]</button>
         </div>
 
-        <!-- Admin Panel (hidden by default) -->
-        <section id="admin-panel" class="hidden">
-            <h2 class="section-header">Admin Dashboard</h2>
+        <!-- Admin Panel -->
+        <section id="admin-panel" class="hidden ui-box">
+            <h2 class="section-header">// ADMIN DASHBOARD</h2>
             <div id="create-company-form">
-                <input type="text" id="new-company-name" placeholder="Enter new company name">
-                <button id="add-company-button" class="button-primary">Create Company</button>
+                <input type="text" id="new-company-name" placeholder="INITIATE NEW ENTITY..." class="ui-input">
+                <button id="add-company-button" class="ui-button">[ CREATE ]</button>
             </div>
             <div id="companies-container-admin"></div>
         </section>
 
-        <!-- Public View (visible by default) -->
-        <section id="public-view">
-            <!-- The header is now outside the public view -->
+        <!-- Public View -->
+        <section id="public-view" class="ui-box">
             <div id="companies-container-public"></div>
         </section>
     </main>
