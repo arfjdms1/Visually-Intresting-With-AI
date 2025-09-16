@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Model Registry</title>
-    <!-- Recommended Font -->
+    <!-- Recommended Font: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -15,48 +15,56 @@
 
     <!-- Login Modal -->
     <div id="login-modal-overlay" class="hidden">
-        <section id="login-section" class="ui-box">
+        <section id="login-section" class="ui-panel">
             <button id="close-modal-button" class="close-button">&times;</button>
-            <h1>[ ADMIN ACCESS ]</h1>
+            <h1 class="panel-title">Admin Access</h1>
             <div class="login-box">
-                <input type="password" id="password" placeholder="PASSWORD" class="ui-input">
-                <button id="login-button" class="ui-button">[ AUTHENTICATE ]</button>
-                <p id="login-error">ACCESS DENIED.</p>
+                <input type="password" id="password" placeholder="Password" class="ui-input">
+                <button id="login-button" class="ui-button btn-gradient">Authenticate</button>
+                <p id="login-error">Access Denied: Invalid Credentials.</p>
             </div>
         </section>
     </div>
 
     <!-- Site Header -->
-    <header class="site-header">
-        <div class="container">
-            <h1 class="site-title" id="site-title">> AI_MODEL_REGISTRY<span class="blinking-cursor">_</span></h1>
-            <button id="open-login-button" class="ui-button">[ SECURE LOGIN ]</button>
-        </div>
+    <header id="site-header" class="site-header">
+        <nav class="container">
+            <a href="/" class="site-title">AI Model Registry</a>
+            <button id="open-login-button" class="ui-button btn-secondary">Admin Login</button>
+        </nav>
     </header>
 
     <!-- Main Content -->
     <main class="container" id="main-content">
         <!-- View switcher for admin -->
         <div id="view-switcher" class="view-switcher hidden">
-            <button id="view-admin-button" class="ui-button inactive">[ ADMIN_DASHBOARD ]</button>
-            <button id="view-public-button" class="ui-button">[ PUBLIC_VIEW ]</button>
+            <button id="view-admin-button" class="ui-button btn-secondary">Dashboard</button>
+            <button id="view-public-button" class="ui-button btn-gradient">Public View</button>
         </div>
 
         <!-- Admin Panel -->
-        <section id="admin-panel" class="hidden ui-box">
-            <h2 class="section-header">// ADMIN DASHBOARD</h2>
-            <div id="create-company-form">
-                <input type="text" id="new-company-name" placeholder="INITIATE NEW ENTITY..." class="ui-input">
-                <button id="add-company-button" class="ui-button">[ CREATE ]</button>
+        <section id="admin-panel" class="hidden">
+            <div class="ui-panel" id="create-company-panel">
+                 <h2 class="panel-title">Initiate New Entity</h2>
+                <div id="create-company-form">
+                    <input type="text" id="new-company-name" placeholder="Enter company name..." class="ui-input">
+                    <button id="add-company-button" class="ui-button btn-gradient">Create</button>
+                </div>
             </div>
             <div id="companies-container-admin"></div>
         </section>
 
         <!-- Public View -->
-        <section id="public-view" class="ui-box">
+        <section id="public-view">
             <div id="companies-container-public"></div>
         </section>
     </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>© 2025 AI Model Registry. All rights reserved.</p>
+        </div>
+    </footer>
     
     <script src="/static/script.js"></script>
 </body>
