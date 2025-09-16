@@ -1,10 +1,10 @@
 import json
+import os
 import re
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Dict, List, Optional
 
-import aiofiles
+import httpx
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -13,12 +13,17 @@ from fastapi.staticfiles import StaticFiles
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-# --- Configuration & Security ---
-SECRET_KEY = "rherehgeuhuerhiehuw7454328&^&%$^jddfhghterwubfdtuygy"
-ALGORITHM = "HS256"
+# --- Configuration & Secrets ---
+# These are loaded securely from your Vercel project's environment variables.
+ORACLE_SERVER_URL = os.getenv("ORACLE_SERVER_URL")
+ORACLE_API_KEY = os.getenv("ORACLE_API_KEY")
+
+# These are now just simple names for our files on the Oracle server.
+DB_BIN_ID = "database"
+VOTE_BIN_ID = "votes"
+
+SECRET_KEY = "a_very_secret_key_that_you_should_change"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-DB_PATH = Path("/tmp/database.json")
-VOTE_DB_PATH = Path("/tmp/votes.json")
 
 # !!! SECURITY WARNING: This is highly insecure. Do not use in production. !!!
 ADMIN_USERNAME = "admin"
@@ -50,7 +55,24 @@ class ModelIn(BaseModel):
     description: Optional[str] = ""
     htmlContent: str
 
-# --- Slug Generation Function ---
+# --- Database I/O Functions (Replaced with API Calls to your Oracle Server) ---
+async def read_data(bin_id: str):
+    """Reads a JSON 'bin' from your self-hosted Oracle server."""
+    url = f"{ORACLE_SERVER_URL}/b/{bin_id}"
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+    response.raise_for_status()  # Will raise an exception for 4xx/5xx errors
+    return response.json()
+
+async def write_data(data: dict, bin_id: str):
+    """Writes a JSON 'bin' to your self-hosted Oracle server using the secret API key."""
+    headers = {'Content-Type': 'application/json', 'X-API-Key': ORACLE_API_KEY}
+    url = f"{ORACLE_SERVER_URL}/b/{bin_id}"
+    async with httpx.AsyncClient() as client:
+        response = await client.put(url, json=data, headers=headers)
+    response.raise_for_status()
+
+# --- Slug & Security Utility Functions ---
 def slugify(text: str) -> str:
     text = text.lower()
     text = re.sub(r'[\s/]+', '-', text)
@@ -58,7 +80,6 @@ def slugify(text: str) -> str:
     text = re.sub(r'-+', '-', text)
     return text.strip('-')
 
-# --- Security & DB Utility Functions ---
 def verify_password(plain_password, stored_password):
     return plain_password == stored_password
 
@@ -82,24 +103,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return {"username": username}
 
-async def read_data(path: Path):
-    if not path.exists(): return {}
-    async with aiofiles.open(path, "r") as f:
-        try: return json.loads(await f.read())
-        except json.JSONDecodeError: return {}
-
-async def write_data(data: dict, path: Path):
-    async with aiofiles.open(path, "w") as f:
-        await f.write(json.dumps(data, indent=2))
-
-async def find_model_by_id(model_id: int):
-    db = await read_data(DB_PATH)
-    for company_data in db.values():
-        for model in company_data.get("models", []):
-            if model.get("id") == model_id:
-                return model
-    return None
-
 # --- Authentication Endpoint ---
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -113,18 +116,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 # --- Public API Routes ---
 @app.get("/api/data", response_class=JSONResponse)
 async def get_all_data():
-    return await read_data(DB_PATH)
-
-@app.get("/models/{model_id}", response_class=HTMLResponse)
-async def get_model_html(model_id: int):
-    model = await find_model_by_id(model_id)
-    if not model: raise HTTPException(status_code=404)
-    back_button_html = """<a href="/" style="position: fixed; top: 10px; left: 10px; padding: 10px 15px; background-color: #03DAC6; color: black; text-decoration: none; border-radius: 5px; font-family: sans-serif; z-index: 10000;">&larr; Back</a>"""
-    return HTMLResponse(content=back_button_html + model.get("htmlContent", ""))
+    return await read_data(DB_BIN_ID)
 
 @app.get("/api/leaderboard", response_class=JSONResponse)
 async def get_leaderboard():
-    db = await read_data(DB_PATH)
+    db = await read_data(DB_BIN_ID)
     all_models = []
     for company_data in db.values():
         for model in company_data.get("models", []):
@@ -139,13 +135,13 @@ async def get_leaderboard():
 @app.post("/api/models/{model_id}/vote", status_code=200)
 async def vote_for_model(model_id: int, request: Request):
     client_ip = request.client.host
-    votes_db = await read_data(VOTE_DB_PATH)
+    votes_db = await read_data(VOTE_BIN_ID)
     voters_for_model = votes_db.get(str(model_id), [])
     
     if client_ip in voters_for_model:
         raise HTTPException(status_code=403, detail="You have already voted for this model.")
     
-    db = await read_data(DB_PATH)
+    db = await read_data(DB_BIN_ID)
     model_to_update = None
     for company_data in db.values():
         for model in company_data.get("models", []):
@@ -159,8 +155,8 @@ async def vote_for_model(model_id: int, request: Request):
         
     voters_for_model.append(client_ip)
     votes_db[str(model_id)] = voters_for_model
-    await write_data(votes_db, VOTE_DB_PATH)
-    await write_data(db, DB_PATH)
+    await write_data(votes_db, VOTE_BIN_ID)
+    await write_data(db, DB_BIN_ID)
     
     return {"message": "Vote successful", "new_votes": model_to_update["votes"]}
 
@@ -174,16 +170,16 @@ async def create_company(request: Request, current_user: dict = Depends(get_curr
     slug = slugify(company_name)
     if not slug: raise HTTPException(status_code=400, detail="Company name is invalid.")
 
-    data = await read_data(DB_PATH)
+    data = await read_data(DB_BIN_ID)
     if slug in data: raise HTTPException(status_code=409, detail="A company with a similar name already exists.")
     
     data[slug] = { "name": company_name, "models": [] }
-    await write_data(data, DB_PATH)
+    await write_data(data, DB_BIN_ID)
     return {"message": "Company created successfully."}
 
 @app.post("/api/companies/{company_slug}/models", status_code=201)
 async def add_model_to_company(company_slug: str, model_in: ModelIn, current_user: dict = Depends(get_current_user)):
-    data = await read_data(DB_PATH)
+    data = await read_data(DB_BIN_ID)
     if company_slug not in data: raise HTTPException(status_code=404, detail="Company not found.")
     
     new_model = {
@@ -191,12 +187,12 @@ async def add_model_to_company(company_slug: str, model_in: ModelIn, current_use
         "description": model_in.description, "htmlContent": model_in.htmlContent, "votes": 0
     }
     data[company_slug]["models"].append(new_model)
-    await write_data(data, DB_PATH)
+    await write_data(data, DB_BIN_ID)
     return new_model
 
 @app.delete("/api/models/{company_slug}/{model_id}", status_code=204)
 async def delete_model(company_slug: str, model_id: int, current_user: dict = Depends(get_current_user)):
-    data = await read_data(DB_PATH)
+    data = await read_data(DB_BIN_ID)
     if company_slug not in data: raise HTTPException(status_code=404, detail="Company not found.")
     
     models_list = data[company_slug].get("models", [])
@@ -205,7 +201,7 @@ async def delete_model(company_slug: str, model_id: int, current_user: dict = De
     
     if len(data[company_slug]["models"]) == initial_length: raise HTTPException(status_code=404, detail="Model not found.")
     
-    await write_data(data, DB_PATH)
+    await write_data(data, DB_BIN_ID)
     return Response(status_code=204)
 
 # --- Serve The Front-End ---
@@ -213,10 +209,7 @@ async def delete_model(company_slug: str, model_id: int, current_user: dict = De
 async def favicon():
     return FileResponse("static/favicon.ico")
 
-@app.get("/", response_class=FileResponse)
-async def serve_frontend():
+# This catch-all route must be last
+@app.get("/{path:path}")
+async def serve_frontend(path: str):
     return FileResponse("static/index.html")
-
-# --- Run Command ---
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
