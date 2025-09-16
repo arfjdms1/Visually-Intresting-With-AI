@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -13,21 +14,20 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 
 # --- Configuration & Security ---
-SECRET_KEY = "Ghtuhuwehuheuwfiwhgrewuegdfueiwk"
+SECRET_KEY = "rherehgeuhuerhiehuw7454328&^&%$^jddfhghterwubfdtuygy"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 DB_PATH = Path("/tmp/database.json")
 VOTE_DB_PATH = Path("/tmp/votes.json")
 
-# --- MODIFICATION: Plain-text password is stored directly ---
 # !!! SECURITY WARNING: This is highly insecure. Do not use in production. !!!
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "21@Pril2012"  # The plain-text password
+ADMIN_PASSWORD = "21@Pril2012"  # Plain-text password
 
 app = FastAPI(title="AI Model Showcase API")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# --- MIDDLEWARE to prevent API caching ---
+# --- Middleware to prevent API caching ---
 @app.middleware("http")
 async def add_no_cache_header(request: Request, call_next):
     response = await call_next(request)
@@ -49,6 +49,14 @@ class ModelIn(BaseModel):
     name: str
     description: Optional[str] = ""
     htmlContent: str
+
+# --- Slug Generation Function ---
+def slugify(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r'[\s/]+', '-', text)
+    text = re.sub(r'[^a-z0-9-]', '', text)
+    text = re.sub(r'-+', '-', text)
+    return text.strip('-')
 
 # --- Security & DB Utility Functions ---
 def verify_password(plain_password, stored_password):
@@ -86,9 +94,10 @@ async def write_data(data: dict, path: Path):
 
 async def find_model_by_id(model_id: int):
     db = await read_data(DB_PATH)
-    for models in db.values():
-        for model in models:
-            if model.get("id") == model_id: return model
+    for company_data in db.values():
+        for model in company_data.get("models", []):
+            if model.get("id") == model_id:
+                return model
     return None
 
 # --- Authentication Endpoint ---
@@ -117,12 +126,13 @@ async def get_model_html(model_id: int):
 async def get_leaderboard():
     db = await read_data(DB_PATH)
     all_models = []
-    for company, models in db.items():
-        for model in models:
-            model_info = model.copy()
-            model_info['company'] = company
-            all_models.append(model_info)
-            
+    for company_data in db.values():
+        for model in company_data.get("models", []):
+            all_models.append({
+                "company": company_data.get("name"),
+                "name": model.get("name"),
+                "votes": model.get("votes", 0)
+            })
     sorted_models = sorted(all_models, key=lambda x: (-x.get("votes", 0), x.get("name")))
     return sorted_models[:5]
 
@@ -137,8 +147,8 @@ async def vote_for_model(model_id: int, request: Request):
     
     db = await read_data(DB_PATH)
     model_to_update = None
-    for models in db.values():
-        for model in models:
+    for company_data in db.values():
+        for model in company_data.get("models", []):
             if model.get("id") == model_id:
                 model["votes"] = model.get("votes", 0) + 1
                 model_to_update = model
@@ -160,32 +170,41 @@ async def create_company(request: Request, current_user: dict = Depends(get_curr
     body = await request.json()
     company_name = body.get("companyName")
     if not company_name: raise HTTPException(status_code=400, detail="Company name is required.")
+    
+    slug = slugify(company_name)
+    if not slug: raise HTTPException(status_code=400, detail="Company name is invalid.")
+
     data = await read_data(DB_PATH)
-    if company_name in data: raise HTTPException(status_code=409, detail="Company already exists.")
-    data[company_name] = []
+    if slug in data: raise HTTPException(status_code=409, detail="A company with a similar name already exists.")
+    
+    data[slug] = { "name": company_name, "models": [] }
     await write_data(data, DB_PATH)
     return {"message": "Company created successfully."}
 
-@app.post("/api/companies/{company_name}/models", status_code=201)
-async def add_model_to_company(company_name: str, model_in: ModelIn, current_user: dict = Depends(get_current_user)):
+@app.post("/api/companies/{company_slug}/models", status_code=201)
+async def add_model_to_company(company_slug: str, model_in: ModelIn, current_user: dict = Depends(get_current_user)):
     data = await read_data(DB_PATH)
-    if company_name not in data: raise HTTPException(status_code=404, detail="Company not found.")
+    if company_slug not in data: raise HTTPException(status_code=404, detail="Company not found.")
     
     new_model = {
         "id": int(datetime.now().timestamp() * 1000), "name": model_in.name,
         "description": model_in.description, "htmlContent": model_in.htmlContent, "votes": 0
     }
-    data[company_name].append(new_model)
+    data[company_slug]["models"].append(new_model)
     await write_data(data, DB_PATH)
     return new_model
 
-@app.delete("/api/models/{company_name}/{model_id}", status_code=204)
-async def delete_model(company_name: str, model_id: int, current_user: dict = Depends(get_current_user)):
+@app.delete("/api/models/{company_slug}/{model_id}", status_code=204)
+async def delete_model(company_slug: str, model_id: int, current_user: dict = Depends(get_current_user)):
     data = await read_data(DB_PATH)
-    if company_name not in data: raise HTTPException(status_code=404, detail="Company not found.")
-    initial_length = len(data[company_name])
-    data[company_name] = [m for m in data[company_name] if m.get("id") != model_id]
-    if len(data[company_name]) == initial_length: raise HTTPException(status_code=404, detail="Model not found.")
+    if company_slug not in data: raise HTTPException(status_code=404, detail="Company not found.")
+    
+    models_list = data[company_slug].get("models", [])
+    initial_length = len(models_list)
+    data[company_slug]["models"] = [m for m in models_list if m.get("id") != model_id]
+    
+    if len(data[company_slug]["models"]) == initial_length: raise HTTPException(status_code=404, detail="Model not found.")
+    
     await write_data(data, DB_PATH)
     return Response(status_code=204)
 
