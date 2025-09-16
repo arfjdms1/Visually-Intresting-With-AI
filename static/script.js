@@ -1,5 +1,85 @@
+// --- DYNAMIC PARTICLE BACKGROUND SCRIPT ---
+// This runs immediately to set up the animated background.
+(function() {
+    const canvas = document.getElementById('particle-canvas');
+    if (!canvas) {
+        console.error('Particle canvas not found.');
+        return;
+    }
+    const ctx = canvas.getContext('2d');
+    let particlesArray;
+
+    function setupCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2 + 1;
+            this.speedX = Math.random() * 0.5 - 0.25;
+            this.speedY = Math.random() * 0.5 - 0.25;
+            this.color = `rgba(50, 183, 182, ${Math.random() * 0.5 + 0.2})`;
+        }
+        update() {
+            if (this.x > canvas.width || this.x < 0) this.speedX = -this.speedX;
+            if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY;
+            this.x += this.speedX;
+            this.y += this.speedY;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function init() {
+        setupCanvas();
+        particlesArray = [];
+        let numberOfParticles = Math.floor((canvas.height * canvas.width) / 9000);
+        for (let i = 0; i < numberOfParticles; i++) {
+            particlesArray.push(new Particle());
+        }
+    }
+
+    function connect() {
+        let opacityValue = 1;
+        for (let a = 0; a < particlesArray.length; a++) {
+            for (let b = a; b < particlesArray.length; b++) {
+                let distance = ((particlesArray[a].x - particlesArray[b].x) ** 2) + ((particlesArray[a].y - particlesArray[b].y) ** 2);
+                if (distance < (canvas.width / 7) * (canvas.height / 7)) {
+                    opacityValue = 1 - (distance / 20000);
+                    ctx.strokeStyle = `rgba(74, 137, 137, ${opacityValue})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                    ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particlesArray.forEach(p => { p.update(); p.draw(); });
+        connect();
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', init);
+    init();
+    animate();
+})();
+
+
+// --- MAIN APPLICATION LOGIC ---
+// This runs after the main HTML document has been loaded.
 document.addEventListener('DOMContentLoaded', () => {
-    // All application logic is now cleanly contained within this single object.
     const app = {
         elements: {
             siteHeader: document.getElementById('site-header'),
@@ -19,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
             adminContainer: document.getElementById('companies-container-admin'),
             publicContainer: document.getElementById('companies-container-public'),
         },
-        
+
         init() {
             this.attachEventListeners();
             this.checkLoginState();
@@ -38,22 +118,21 @@ document.addEventListener('DOMContentLoaded', () => {
             this.elements.viewPublicBtn.addEventListener('click', () => this.switchView('public'));
             this.elements.addCompanyBtn.addEventListener('click', () => this.addCompany());
             this.elements.adminContainer.addEventListener('click', (e) => {
-                if (e.target.closest('.add-model-button')) this.addModel(e.target.closest('.add-model-button').dataset.company);
-                if (e.target.classList.contains('delete-model')) this.deleteModel(e.target.dataset.company, e.target.dataset.modelId);
+                const addBtn = e.target.closest('.add-model-button');
+                const delBtn = e.target.closest('.delete-model');
+                if (addBtn) this.addModel(addBtn.dataset.company);
+                if (delBtn) this.deleteModel(delBtn.dataset.company, delBtn.dataset.modelId);
             });
         },
-        
+
         handleHeaderScroll() {
-            if (window.scrollY > 10) {
-                this.elements.siteHeader.classList.add('scrolled');
-            } else {
-                this.elements.siteHeader.classList.remove('scrolled');
-            }
+            if (window.scrollY > 10) this.elements.siteHeader.classList.add('scrolled');
+            else this.elements.siteHeader.classList.remove('scrolled');
         },
-        
+
         applyFadeInAnimation(container) {
             container.childNodes.forEach((child, index) => {
-                if (child.nodeType === 1) {
+                if (child.nodeType === 1) { // Check if it's an element
                     child.style.animationDelay = `${index * 100}ms`;
                     child.classList.add('fade-in');
                 }
@@ -154,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         async deleteModel(companyName, modelId) {
-            if (!confirm('Are you sure?')) return;
+            if (!confirm('Are you sure you want to delete this model?')) return;
             await fetch(`/api/models/${companyName}/${modelId}`, { method: 'DELETE', headers: this.getAuthHeaders() });
             this.switchView('admin');
         },
@@ -162,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminView(data) {
             this.elements.adminContainer.innerHTML = '';
             for (const [companyName, models] of Object.entries(data)) {
-                const modelListHTML = models.map(model => `<li><span>${model.name}</span><button class="delete-model" data-company="${companyName}" data-model-id="${model.id}">&times;</button></li>`).join('');
+                const modelListHTML = models.map(model => `<li><span class="model-name">${model.name}</span><button class="delete-model" data-company="${companyName}" data-model-id="${model.id}">&times;</button></li>`).join('');
                 this.elements.adminContainer.innerHTML += `<div class="company-card"><h3>${companyName}</h3><div class="add-model-form"><input type="text" id="model-name-${companyName}" placeholder="New Model Name" class="ui-input"><textarea id="model-html-${companyName}" placeholder="Paste model HTML payload..."></textarea><button class="ui-button btn-gradient add-model-button" data-company="${companyName}"><span>Add Model</span></button></div><div class="model-list"><ul>${modelListHTML}</ul></div></div>`;
             }
             this.applyFadeInAnimation(this.elements.adminContainer);
@@ -171,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPublicView(data) {
             this.elements.publicContainer.innerHTML = '';
             if (Object.keys(data).length === 0) {
-                this.elements.publicContainer.innerHTML = '<div class="ui-panel" style="text-align: center; color: var(--text-secondary);">No models have been registered yet.</div>';
+                this.elements.publicContainer.innerHTML = '<div class="ui-panel" style="text-align: center; color: var(--text-secondary);">No models have been registered yet. An admin can add them.</div>';
                 return;
             }
             for (const [companyName, models] of Object.entries(data)) {
@@ -182,6 +261,5 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     };
 
-    // Initialize the application
     app.init();
 });
