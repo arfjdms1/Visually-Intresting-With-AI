@@ -1,48 +1,24 @@
 // --- DYNAMIC PARTICLE BACKGROUND SCRIPT ---
 (function() {
-    const canvas = document.getElementById('particle-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let particlesArray;
+    const canvas = document.getElementById('particle-canvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d'); let particlesArray;
     function setupCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     class Particle {
-        constructor() {
-            this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height;
-            this.size = Math.random() * 2 + 1; this.speedX = Math.random() * 0.5 - 0.25;
-            this.speedY = Math.random() * 0.5 - 0.25; this.color = `rgba(50, 183, 182, ${Math.random() * 0.5 + 0.2})`;
-        }
-        update() {
-            if (this.x > canvas.width || this.x < 0) this.speedX = -this.speedX;
-            if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY;
-            this.x += this.speedX; this.y += this.speedY;
-        }
+        constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 2 + 1; this.speedX = Math.random() * 0.5 - 0.25; this.speedY = Math.random() * 0.5 - 0.25; this.color = `rgba(50, 183, 182, ${Math.random() * 0.5 + 0.2})`; }
+        update() { if (this.x > canvas.width || this.x < 0) this.speedX = -this.speedX; if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY; this.x += this.speedX; this.y += this.speedY; }
         draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
     }
-    function init() {
-        setupCanvas(); particlesArray = [];
-        let num = Math.floor((canvas.height * canvas.width) / 9000);
-        for (let i = 0; i < num; i++) { particlesArray.push(new Particle()); }
-    }
+    function init() { setupCanvas(); particlesArray = []; let num = Math.floor((canvas.height * canvas.width) / 9000); for (let i = 0; i < num; i++) { particlesArray.push(new Particle()); } }
     function connect() {
         for (let a = 0; a < particlesArray.length; a++) {
             for (let b = a; b < particlesArray.length; b++) {
                 let dist = ((particlesArray[a].x - particlesArray[b].x) ** 2) + ((particlesArray[a].y - particlesArray[b].y) ** 2);
-                if (dist < (canvas.width / 7) * (canvas.height / 7)) {
-                    let opacity = 1 - (dist / 20000);
-                    ctx.strokeStyle = `rgba(74, 137, 137, ${opacity})`; ctx.lineWidth = 1;
-                    ctx.beginPath(); ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                    ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke();
-                }
+                if (dist < (canvas.width / 7) * (canvas.height / 7)) { let opacity = 1 - (dist / 20000); ctx.strokeStyle = `rgba(74, 137, 137, ${opacity})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(particlesArray[a].x, particlesArray[a].y); ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke(); }
             }
         }
     }
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particlesArray.forEach(p => { p.update(); p.draw(); });
-        connect(); requestAnimationFrame(animate);
-    }
-    window.addEventListener('resize', init);
-    init(); animate();
+    function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particlesArray.forEach(p => { p.update(); p.draw(); }); connect(); requestAnimationFrame(animate); }
+    window.addEventListener('resize', init); init(); animate();
 })();
 
 // --- MAIN APPLICATION LOGIC ---
@@ -59,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             adminContainer: document.getElementById('companies-container-admin'), publicContainer: document.getElementById('companies-container-public'),
             searchInput: document.getElementById('search-input'), leaderboardList: document.getElementById('leaderboard-list'),
             loadingIndicator: document.getElementById('loading-indicator'),
+            panelWrapper: document.getElementById('panel-wrapper'), // New element
         },
         init() { this.attachEventListeners(); this.checkLoginState(); },
         attachEventListeners() {
@@ -80,19 +57,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const voteBtn = e.target.closest('.vote-button'); if (voteBtn) this.handleVote(voteBtn.dataset.modelId, voteBtn);
             });
         },
-        setLoading(isLoading) { this.elements.loadingIndicator.classList.toggle('hidden', !isLoading); this.elements.publicView.classList.toggle('hidden', isLoading); this.elements.adminPanel.classList.toggle('hidden', isLoading); },
+        // CORRECTED setLoading function
+        setLoading(isLoading) {
+            this.elements.loadingIndicator.classList.toggle('hidden', !isLoading);
+            this.elements.panelWrapper.classList.toggle('hidden', isLoading);
+        },
         async fetchData() { const response = await fetch('/api/data', { cache: 'no-store' }); if (!response.ok) throw new Error("Failed to fetch data"); return response.json(); },
+        // CORRECTED switchView function
         async switchView(view) {
-            this.setLoading(true); const isLoggedIn = !!this.getToken();
+            this.setLoading(true);
+            const isLoggedIn = !!this.getToken();
             try {
+                // Fetch data first, regardless of view
+                const data = await this.fetchData();
+                
                 if (view === 'public' || !isLoggedIn) {
-                    await this.renderLeaderboard(); const data = await this.fetchData(); this.renderPublicView(data);
-                    this.elements.publicView.classList.remove('hidden'); this.elements.adminPanel.classList.add('hidden');
-                } else {
-                    const data = await this.fetchData(); this.renderAdminView(data);
-                    this.elements.adminPanel.classList.remove('hidden'); this.elements.publicView.classList.add('hidden');
+                    await this.renderLeaderboard();
+                    this.renderPublicView(data);
+                    this.elements.publicView.classList.remove('hidden');
+                    this.elements.adminPanel.classList.add('hidden');
+                } else { // Admin view
+                    this.renderAdminView(data);
+                    this.elements.adminPanel.classList.remove('hidden');
+                    this.elements.publicView.classList.add('hidden');
                 }
-            } catch (error) { console.error("Error switching view:", error); } finally { this.setLoading(false); }
+            } catch (error) {
+                console.error("Error switching view:", error);
+                this.elements.panelWrapper.innerHTML = `<div class="ui-panel" style="text-align: center; color: var(--error-color);">Failed to load content. Please try again.</div>`;
+            } finally {
+                this.setLoading(false);
+            }
         },
         async addCompany() { const companyName = this.elements.newCompanyNameInput.value.trim(); if (!companyName) return; await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() }, body: JSON.stringify({ companyName }) }); this.elements.newCompanyNameInput.value = ''; await this.switchView('admin'); },
         async addModel(companyName) {

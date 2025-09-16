@@ -42,32 +42,36 @@
             
             <div class="container" id="content-container">
                 <div id="loading-indicator" class="hidden">Loading...</div>
-                <div id="view-switcher" class="view-switcher hidden">
-                    <button id="view-admin-button" class="ui-button btn-secondary">Dashboard</button>
-                    <button id="view-public-button" class="ui-button btn-gradient"><span>Public View</span></button>
-                </div>
+                
+                <!-- NEW WRAPPER around the panels that will be hidden during load -->
+                <div id="panel-wrapper">
+                    <div id="view-switcher" class="view-switcher hidden">
+                        <button id="view-admin-button" class="ui-button btn-secondary">Dashboard</button>
+                        <button id="view-public-button" class="ui-button btn-gradient"><span>Public View</span></button>
+                    </div>
 
-                <section id="admin-panel" class="hidden">
-                    <div class="ui-panel" id="create-company-panel">
-                        <h2 class="panel-title">Initiate New Entity</h2>
-                        <div id="create-company-form">
-                            <input type="text" id="new-company-name" placeholder="Enter company name..." class="ui-input">
-                            <button id="add-company-button" class="ui-button btn-gradient"><span>Create</span></button>
+                    <section id="admin-panel" class="hidden">
+                        <div class="ui-panel" id="create-company-panel">
+                            <h2 class="panel-title">Initiate New Entity</h2>
+                            <div id="create-company-form">
+                                <input type="text" id="new-company-name" placeholder="Enter company name..." class="ui-input">
+                                <button id="add-company-button" class="ui-button btn-gradient"><span>Create</span></button>
+                            </div>
                         </div>
-                    </div>
-                    <div id="companies-container-admin"></div>
-                </section>
-
-                <section id="public-view">
-                    <div class="search-container">
-                        <input type="search" id="search-input" class="ui-input" placeholder="Search for a company...">
-                    </div>
-                    <section id="leaderboard-section" class="ui-panel">
-                        <h2 class="panel-title">Top 5 Models</h2>
-                        <ol id="leaderboard-list"></ol>
+                        <div id="companies-container-admin"></div>
                     </section>
-                    <div id="companies-container-public"></div>
-                </section>
+
+                    <section id="public-view" class="hidden">
+                        <div class="search-container">
+                            <input type="search" id="search-input" class="ui-input" placeholder="Search for a company...">
+                        </div>
+                        <section id="leaderboard-section" class="ui-panel">
+                            <h2 class="panel-title">Top 5 Models</h2>
+                            <ol id="leaderboard-list"></ol>
+                        </section>
+                        <div id="companies-container-public"></div>
+                    </section>
+                </div>
             </div>
         </main>
 
