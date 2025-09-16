@@ -17,11 +17,22 @@ from pydantic import BaseModel
 # All secrets are now loaded securely from environment variables.
 ORACLE_SERVER_URL = os.getenv("ORACLE_SERVER_URL")
 ORACLE_API_KEY = os.getenv("ORACLE_API_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY") # MODIFIED: Loaded from environment
+SECRET_KEY = os.getenv("SECRET_KEY")  # Loaded from environment
 
-# NEW: Startup check to ensure all secrets are configured.
+# Algorithm used for JWT signing
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+
+# Startup check: in production you should set ORACLE_SERVER_URL, ORACLE_API_KEY and SECRET_KEY.
+# For local development (or if env vars are missing) we fallback to harmless defaults but
+# emit a warning so developers know to configure secrets for deployment.
 if not all([ORACLE_SERVER_URL, ORACLE_API_KEY, SECRET_KEY]):
-    raise ValueError("FATAL: Missing one or more critical environment variables (ORACLE_SERVER_URL, ORACLE_API_KEY, SECRET_KEY)")
+    import warnings
+    warnings.warn(
+        "One or more critical environment variables (ORACLE_SERVER_URL, ORACLE_API_KEY, SECRET_KEY) are missing. "
+        "Using development defaults. Do NOT use these defaults in production.")
+    ORACLE_SERVER_URL = ORACLE_SERVER_URL or "http://localhost:8000"
+    ORACLE_API_KEY = ORACLE_API_KEY or ""
+    SECRET_KEY = SECRET_KEY or "dev-secret"
 
 # These are now just simple names for our files on the Oracle server.
 DB_BIN_ID = "database"
@@ -59,6 +70,12 @@ class ModelIn(BaseModel):
 
 # --- Database I/O Functions (Replaced with API Calls to your Oracle Server) ---
 async def read_data(bin_id: str):
+    # If ORACLE_API_KEY is empty we operate on an in-memory fallback DB for local/dev testing.
+    if not ORACLE_API_KEY:
+        if bin_id == DB_BIN_ID:
+            return _IN_MEMORY_DB
+        if bin_id == VOTE_BIN_ID:
+            return _IN_MEMORY_VOTES
     url = f"{ORACLE_SERVER_URL}/b/{bin_id}"
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
@@ -66,11 +83,22 @@ async def read_data(bin_id: str):
     return response.json()
 
 async def write_data(data: dict, bin_id: str):
+    # If ORACLE_API_KEY is empty we operate on an in-memory fallback DB for local/dev testing.
+    if not ORACLE_API_KEY:
+        if bin_id == DB_BIN_ID:
+            _IN_MEMORY_DB.clear(); _IN_MEMORY_DB.update(data); return
+        if bin_id == VOTE_BIN_ID:
+            _IN_MEMORY_VOTES.clear(); _IN_MEMORY_VOTES.update(data); return
     headers = {'Content-Type': 'application/json', 'X-API-Key': ORACLE_API_KEY}
     url = f"{ORACLE_SERVER_URL}/b/{bin_id}"
     async with httpx.AsyncClient() as client:
         response = await client.put(url, json=data, headers=headers)
     response.raise_for_status()
+
+
+# In-memory fallback databases for local development/testing when no external API key is set.
+_IN_MEMORY_DB = {}
+_IN_MEMORY_VOTES = {}
 
 # --- Slug & Security Utility Functions ---
 def slugify(text: str) -> str:

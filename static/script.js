@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('username', 'admin');
             formData.append('password', this.elements.passwordInput.value);
             try {
-                const response = await fetch('/token', { method: 'POST', body: formData });
+                const response = await fetch('/api/token', { method: 'POST', body: formData });
                 if (!response.ok) throw new Error('Login failed');
                 const data = await response.json();
                 sessionStorage.setItem('authToken', data.access_token);
