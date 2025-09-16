@@ -115,6 +115,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def get_all_data():
     return await read_data(DB_PATH)
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
 
 @app.get("/models/{model_id}", response_class=HTMLResponse)
 async def get_model_html(model_id: int):
